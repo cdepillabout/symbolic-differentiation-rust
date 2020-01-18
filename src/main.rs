@@ -1,13 +1,20 @@
 // https://www.codewars.com/kata/584daf7215ac503d5a0001ae/train/rust
 
+#[macro_use]
+extern crate nom;
 
+use nom::{Err, IResult};
 use nom::branch::alt;
-use nom::char::complete::char;
+use nom::character::complete::{char, digit1};
+use nom::error::ErrorKind;
+use std::str::FromStr;
 
 fn main() {
     
 }
 
+
+#[derive(Debug, PartialEq)]
 enum FuncAr2 {
     Plus,
     Minus,
@@ -16,6 +23,7 @@ enum FuncAr2 {
     Pow,
 }
 
+#[derive(Debug, PartialEq)]
 enum FuncAr1 {
     Cos,
     Sin,
@@ -24,6 +32,7 @@ enum FuncAr1 {
     Ln,
 }
 
+#[derive(Debug, PartialEq)]
 enum Expr {
     Var,
     Num(i32),
@@ -31,18 +40,19 @@ enum Expr {
     FuncAr1(FuncAr1, Box<Expr>),
 }
 
-fn parse_var(input: &str) -> IResult<&str, Expr> {
-    char('x')(expr)
-}
+named!(parse_var<&str, Expr>,
+    map!(char('x'), |_| Expr::Var));
 
-fn parse_num(expr: &str) -> IResult<&str, Expr> {
-}
+named!(parse_num<&str, Expr>,
+    map_res!(digit1, |s: &str| s.parse::<i32>().map(Expr::Num)));
 
-fn parse_expr(expr: &str) -> Expr {
-    parse_var(input)
-    // alt((parse_var, parse_num , parse_func_ar_2, parse_func_ar_1))(input)
-        .expect(format!("we should never get bad expressions: {}", str))
-        .0
+named!(parse_expr<&str,Expr>,
+    alt!(parse_var | parse_num));
+
+fn expr_parser(input: &str) -> Expr {
+    parse_expr(input)
+        .expect(&format!("we should never get bad expressions: {}", input))
+        .1
 }
 
 fn diff(expr: &str) -> String {
@@ -54,6 +64,25 @@ fn diff(expr: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_var() {
+        assert_eq!(parse_var("x"), Ok(("", Expr::Var)));
+        assert_eq!(parse_var("y"), Err(Err::Error(("y", ErrorKind::Char))));
+    }
+
+    #[test]
+    fn test_parse_num() {
+        assert_eq!(parse_num("123"), Ok(("", Expr::Num(123))));
+        assert_eq!(parse_num("y"), Err(Err::Error(("y", ErrorKind::Digit))));
+    }
+
+    #[test]
+    fn test_parse_expr() {
+        assert_eq!(parse_expr("123"), Ok(("", Expr::Num(123))));
+        assert_eq!(parse_expr("x"), Ok(("", Expr::Var)));
+        assert_eq!(parse_expr("y"), Err(Err::Error(("y", ErrorKind::Alt))));
+    }
 
     #[test]
     fn test_fixed() {
