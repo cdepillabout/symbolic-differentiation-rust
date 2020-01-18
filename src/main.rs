@@ -1,5 +1,48 @@
+// https://www.codewars.com/kata/584daf7215ac503d5a0001ae/train/rust
+
+
+use nom::branch::alt;
+use nom::char::complete::char;
+
 fn main() {
     
+}
+
+enum FuncAr2 {
+    Plus,
+    Minus,
+    Times,
+    Div,
+    Pow,
+}
+
+enum FuncAr1 {
+    Cos,
+    Sin,
+    Tan,
+    Exp,
+    Ln,
+}
+
+enum Expr {
+    Var,
+    Num(i32),
+    FuncAr2(FuncAr2, Box<Expr>, Box<Expr>),
+    FuncAr1(FuncAr1, Box<Expr>),
+}
+
+fn parse_var(input: &str) -> IResult<&str, Expr> {
+    char('x')(expr)
+}
+
+fn parse_num(expr: &str) -> IResult<&str, Expr> {
+}
+
+fn parse_expr(expr: &str) -> Expr {
+    parse_var(input)
+    // alt((parse_var, parse_num , parse_func_ar_2, parse_func_ar_1))(input)
+        .expect(format!("we should never get bad expressions: {}", str))
+        .0
 }
 
 fn diff(expr: &str) -> String {
