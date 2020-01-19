@@ -323,6 +323,7 @@ fn simplify(expr: Expr) -> Expr {
 }
 
 fn diff(expr: &str) -> String {
+    // TODO: Implement from_string for expr
     pretty_print_expr(simplify(auto_diff(expr_parser(expr))))
 }
 
