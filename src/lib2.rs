@@ -159,85 +159,85 @@ fn parse_var(i: &str) -> Option<(String, Expr)> {
     Some((i2, Expr::Var))
 }
 
-fn parse_alts<T, F>(ps: Vec<F>) -> impl Fn(&str) -> Option<(String, T)> where
-    F: Fn(&str) -> Option<(String, T)>
-{
-    move |i| {
-        let res: Option<Option<(String, T)>> =
-            ps.iter().map(|p| p(i)).find(Option::is_some);
-        match res {
-            None => None,
-            Some(o) => o,
-        }
-    }
-}
+// fn parse_alts<T, F>(ps: Vec<F>) -> impl Fn(&str) -> Option<(String, T)> where
+//     F: Fn(&str) -> Option<(String, T)>
+// {
+//     move |i| {
+//         let res: Option<Option<(String, T)>> =
+//             ps.iter().map(|p| p(i)).find(Option::is_some);
+//         match res {
+//             None => None,
+//             Some(o) => o,
+//         }
+//     }
+// }
 
-fn parse_alt<T, F>(p1: F, p2: F) -> impl Fn(&str) -> Option<(String, T)> where
-    F: Fn(&str) -> Option<(String, T)>
-{
-    move |i| {
-        match p1(i) {
-            Some(res) => Some(res),
-            None => p2(i),
-        }
-    }
-}
+// fn parse_alt<T, F>(p1: F, p2: F) -> impl Fn(&str) -> Option<(String, T)> where
+//     F: Fn(&str) -> Option<(String, T)>
+// {
+//     move |i| {
+//         match p1(i) {
+//             Some(res) => Some(res),
+//             None => p2(i),
+//         }
+//     }
+// }
 
-fn parse_many<F, T>(p: F) -> impl Fn(&str) -> (String, Vec<T>) where
-    F: Fn(&str) -> Option<(String, T)>
-{
-    move |i| {
-        let mut v = Vec::new();
-        match p(i) {
-            None => (i.to_string(), v),
-            Some((i2, t)) => {
-                v.push(t);
-                let (rest, newv) = parse_many(&p)(&i2);
-                v.extend(newv);
-                (rest, v)
-            }
-        }
-    }
-}
+// fn parse_many<F, T>(p: F) -> impl Fn(&str) -> (String, Vec<T>) where
+//     F: Fn(&str) -> Option<(String, T)>
+// {
+//     move |i| {
+//         let mut v = Vec::new();
+//         match p(i) {
+//             None => (i.to_string(), v),
+//             Some((i2, t)) => {
+//                 v.push(t);
+//                 let (rest, newv) = parse_many(&p)(&i2);
+//                 v.extend(newv);
+//                 (rest, v)
+//             }
+//         }
+//     }
+// }
 
-fn parse_many1<F, T>(p: F) -> impl Fn(&str) -> Option<(String, Vec<T>)> where
-    F: Fn(&str) -> Option<(String, T)>
-{
-    move |i| {
-        let mut v = Vec::new();
-        match p(i) {
-            None => None,
-            Some((i2, t)) => {
-                v.push(t);
-                let (rest, newv) = parse_many(&p)(&i2);
-                v.extend(newv);
-                Some((rest, v))
-            }
-        }
-    }
-}
+// fn parse_many1<F, T>(p: F) -> impl Fn(&str) -> Option<(String, Vec<T>)> where
+//     F: Fn(&str) -> Option<(String, T)>
+// {
+//     move |i| {
+//         let mut v = Vec::new();
+//         match p(i) {
+//             None => None,
+//             Some((i2, t)) => {
+//                 v.push(t);
+//                 let (rest, newv) = parse_many(&p)(&i2);
+//                 v.extend(newv);
+//                 Some((rest, v))
+//             }
+//         }
+//     }
+// }
 
-fn parse_digit(i: &str) -> Option<(String, char)> {
-    parse_alts(
-        vec![
-            parse_char('0'),
-            parse_char('1'),
-            parse_char('2'),
-            parse_char('3'),
-            parse_char('4'),
-            parse_char('5'),
-            parse_char('6'),
-            parse_char('7'),
-            parse_char('8'),
-            parse_char('9'),
-        ]
-    )(i)
-}
+// fn parse_digit(i: &str) -> Option<(String, char)> {
+//     parse_alts(
+//         vec![
+//             parse_char('0'),
+//             parse_char('1'),
+//             parse_char('2'),
+//             parse_char('3'),
+//             parse_char('4'),
+//             parse_char('5'),
+//             parse_char('6'),
+//             parse_char('7'),
+//             parse_char('8'),
+//             parse_char('9'),
+//         ]
+//     )(i)
+// }
 
-fn parse_digits(i: &str) -> Option<(String, String)> {
-    parse_many1(parse_digit)(i)
-        .map(|(res, v): (String, Vec<char>)| (res, v.iter().collect::<String>()))
-}
+// fn parse_digits(i: &str) -> Option<(String, String)> {
+//     parse_many1(parse_digit)(i)
+//         .map(|(res, v): (String, Vec<char>)| (res, v.iter().collect::<String>()))
+// }
 
 // fn parse_float(i: &str) -> Option<(String, f32)> {
 //     parse_many1(
