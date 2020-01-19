@@ -8,6 +8,7 @@ use nom::character::complete::char;
 use nom::error::ErrorKind;
 use nom::number::complete::float;
 use std::ops::{Add, Div, Mul, Sub};
+use std::str::FromStr;
 
 fn main() {
     
@@ -84,6 +85,16 @@ impl From<f32> for Expr {
     }
 }
 
+impl FromStr for Expr {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, String> {
+        parse_expr(s)
+            .map(|(_, expr)| expr)
+            .map_err(|_| format!("could not parse: {}", s))
+    }
+}
+
 named!(parse_var<&str, Expr>,
     map!(char('x'), |_| Expr::Var));
 
@@ -137,9 +148,9 @@ named!(parse_expr<&str,Expr>,
     alt!(parse_var | parse_num | parse_func));
 
 fn expr_parser(input: &str) -> Expr {
-    parse_expr(input)
+    input
+        .parse()
         .expect(&format!("we should never get bad expressions: {}", input))
-        .1
 }
 
 fn pretty_print_func_ar_1(func_ar_1: FuncAr1) -> String {
