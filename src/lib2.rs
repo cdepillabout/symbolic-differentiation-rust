@@ -254,11 +254,45 @@ fn parse_num(i: &str) -> Option<(String, Expr)> {
     Some((r, f.into()))
 }
 
+// named!(parse_func<&str, Expr>,
+//     delimited!(tag!("("), parse_inner_func, tag!(")")));
+
+fn parse_inner_func(i: &str) -> Option<(String, Expr)> {
+    unimplemented!()
+}
+
+fn parse_delimited<F, G, T, U>(start: F, middle: G, end: F) -> impl Fn(&str) -> Option<(String, T)> where
+    F: FnOnce(&str) -> Option<(String, U)>,
+    G: FnOnce(&str) -> Option<(String, T)>,
+{
+    move |i| {
+        match start(i) {
+            None => None,
+            Some((i2, _)) => {
+                match middle(i2) {
+                    None => None,
+                    Some((i3, res)) => {
+                        match end(i3) {
+                            None => None,
+                            Some((i4, _)) => Some((i4, res)),
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn parse_func(i: &str) -> Option<(String, Expr)> {
+    parse_delimited(parse_char('('), parse_inner_func, parse_char(')'))
+}
+
 fn parse_expr(i: &str) -> Option<(String, Expr)> {
     parse_alts(
         vec![
             parse_var as fn(&str) -> Option<(String, Expr)>,
             parse_num,
+            parse_func,
         ]
     )(i)
 }
