@@ -3,13 +3,11 @@
 #[macro_use]
 extern crate nom;
 
-use nom::{Err, IResult};
-use nom::branch::alt;
-use nom::character::complete::{char, digit1};
+use nom::Err;
+use nom::character::complete::char;
 use nom::error::ErrorKind;
 use nom::number::complete::float;
 use std::ops::{Add, Div, Mul, Sub};
-use std::str::FromStr;
 
 fn main() {
     
@@ -188,10 +186,28 @@ fn cos(expr: Expr) -> Expr {
     Expr::FuncAr1(FuncAr1::Cos, bx(expr))
 }
 
+fn tan(expr: Expr) -> Expr {
+    Expr::FuncAr1(FuncAr1::Tan, bx(expr))
+}
+
+fn exp(expr: Expr) -> Expr {
+    Expr::FuncAr1(FuncAr1::Exp, bx(expr))
+}
+
 fn auto_diff_func_ar_1(func_ar_1: FuncAr1, expr: Expr) -> Expr {
     match func_ar_1 {
-        FuncAr1::Cos => -1 * sin(expr),
-        FuncAr1::Sin => cos(expr),
+        FuncAr1::Cos => auto_diff(expr.clone()) * num(-1f32) * sin(expr.clone()),
+        FuncAr1::Sin => auto_diff(expr.clone()) * cos(expr.clone()),
+        // FuncAr1::Tan => (num(1f32) / pow(cos(expr.clone()), 2.into())) * auto_diff(expr),
+        FuncAr1::Tan =>
+            auto_diff(expr.clone()) * (num(1f32) + pow(tan(expr.clone()), 2.into())),
+        FuncAr1::Exp => auto_diff(expr.clone()) * exp(expr.clone()),
+        FuncAr1::Ln => auto_diff(expr.clone()) * (num(1f32) / expr.clone()),
+    }
+}
+
+fn num(f: f32) -> Expr {
+    Expr::Num(f)
 }
 
 fn pow(expr1: Expr, expr2: Expr) -> Expr {
@@ -205,7 +221,7 @@ fn auto_diff_func_ar_2(func_ar_2: FuncAr2, expr1: Expr, expr2: Expr) -> Expr {
         FuncAr2::Times =>
             auto_diff(expr1.clone()) * expr2.clone() + expr1 * auto_diff(expr2),
         FuncAr2::Div =>
-            (auto_diff(expr1.clone()) * expr2.clone() + expr1 * auto_diff(expr2.clone())) /
+            (auto_diff(expr1.clone()) * expr2.clone() - expr1 * auto_diff(expr2.clone())) /
             pow(expr2, 2.into()),
         FuncAr2::Pow =>
             expr2.clone() * pow(expr1.clone(), expr2 - 1.into()) * auto_diff(expr1),
@@ -215,7 +231,7 @@ fn auto_diff_func_ar_2(func_ar_2: FuncAr2, expr1: Expr, expr2: Expr) -> Expr {
 fn auto_diff(expr: Expr) -> Expr {
     match expr {
         Expr::Var => 1.into(),
-        Expr::Num(i) => 0.into(),
+        Expr::Num(_) => 0.into(),
         Expr::FuncAr1(func_ar_1, expr1) =>
             auto_diff_func_ar_1(func_ar_1, *expr1),
         Expr::FuncAr2(func_ar_2, expr1, expr2) =>
@@ -267,7 +283,7 @@ fn simplify_one_step(expr: Expr) -> Expr {
                 // (_, Expr::Num(0)) => 0.into(),
                 // (Expr::Num(1), f) => f,
                 (e, Expr::Num(1f32)) => e,
-                (e, f) => Expr::FuncAr2(FuncAr2::Div, bx(e), bx(f)),
+                (e, f) => Expr::FuncAr2(FuncAr2::Pow, bx(e), bx(f)),
             }
         e => e,
     }
@@ -381,7 +397,7 @@ mod tests {
 
     #[test]
     fn test_auto_diff_no_simp_1() {
-        assert_eq!(test_auto_diff_no_simp("(/ x 2)"), "(/ (+ (* 1 2) (* x 0)) (^ 2 2))");
+        assert_eq!(test_auto_diff_no_simp("(/ x 2)"), "(/ (- (* 1 2) (* x 0)) (^ 2 2))");
     }
 
     #[test]
@@ -401,6 +417,22 @@ mod tests {
     fn test_simplify_6() {
         assert_eq!(test_simp("(/ 2 4)"), "0.5");
     }
+
+    // #[test]
+    // fn test_auto_diff_no_simp_2() {
+    //     assert_eq!(test_auto_diff_no_simp("(tan x)"), "(* (+ 1 (^ (tan x) 2)) 1)")
+    // }
+
+    #[test]
+    fn test_simplify_7() {
+        assert_eq!(test_simp("(* (+ 1 (^ (tan x) 2)) 1)"), "(+ 1 (^ (tan x) 2))")
+    }
+
+    // #[test]
+    // fn test_auto_diff_no_simp_3() {
+    //     assert_eq!(test_auto_diff_no_simp("(/ 2 (+ 1 x))"), "(/ (- (* 0 (+ 1 x)) (* 2 (+ 0 1))) (^ (+ 1 x) 2)2")
+    // }
+        // assert_eq!(diff("(/ 2 (+ 1 x))"), "(/ -2 (^ (+ 1 x) 2))");
 
     #[test]
     fn test_fixed() {
