@@ -180,10 +180,18 @@ fn pretty_print_expr(expr: Expr) -> String {
     }
 }
 
+fn sin(expr: Expr) -> Expr {
+    Expr::FuncAr1(FuncAr1::Sin, bx(expr))
+}
+
+fn cos(expr: Expr) -> Expr {
+    Expr::FuncAr1(FuncAr1::Cos, bx(expr))
+}
+
 fn auto_diff_func_ar_1(func_ar_1: FuncAr1, expr: Expr) -> Expr {
-    expr
-    // match func_ar_1 {
-    //     FuncAr1::
+    match func_ar_1 {
+        FuncAr1::Cos => -1 * sin(expr),
+        FuncAr1::Sin => cos(expr),
 }
 
 fn pow(expr1: Expr, expr2: Expr) -> Expr {
