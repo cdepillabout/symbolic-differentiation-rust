@@ -136,11 +136,6 @@ impl FromStr for Expr {
 // named!(parse_expr<&str,Expr>,
 //     alt!(parse_var | parse_num | parse_func));
 
-// pub fn char<I, Error: ParseError<I>>(
-//         c: char
-// ) -> impl Fn(I) -> IResult<I, char, Error> where
-//     I: Slice<RangeFrom<usize>> + InputIter,
-//         <I as InputIter>::Item: AsChar, 
 
 fn parse_char(c: char) -> impl Fn(&str) -> Option<(String, char)> {
     move |i| {
@@ -159,114 +154,113 @@ fn parse_var(i: &str) -> Option<(String, Expr)> {
     Some((i2, Expr::Var))
 }
 
-// fn parse_alts<T, F>(ps: Vec<F>) -> impl Fn(&str) -> Option<(String, T)> where
-//     F: Fn(&str) -> Option<(String, T)>
-// {
-//     move |i| {
-//         let res: Option<Option<(String, T)>> =
-//             ps.iter().map(|p| p(i)).find(Option::is_some);
-//         match res {
-//             None => None,
-//             Some(o) => o,
-//         }
-//     }
-// }
+fn parse_alts<T, F>(ps: Vec<F>) -> impl Fn(&str) -> Option<(String, T)> where
+    F: Fn(&str) -> Option<(String, T)>
+{
+    move |i| {
+        let res: Option<Option<(String, T)>> =
+            ps.iter().map(|p| p(i)).find(Option::is_some);
+        match res {
+            None => None,
+            Some(o) => o,
+        }
+    }
+}
 
-// fn parse_alt<T, F>(p1: F, p2: F) -> impl Fn(&str) -> Option<(String, T)> where
-//     F: Fn(&str) -> Option<(String, T)>
-// {
-//     move |i| {
-//         match p1(i) {
-//             Some(res) => Some(res),
-//             None => p2(i),
-//         }
-//     }
-// }
+fn parse_alt<T, F>(p1: F, p2: F) -> impl Fn(&str) -> Option<(String, T)> where
+    F: Fn(&str) -> Option<(String, T)>
+{
+    move |i| {
+        match p1(i) {
+            Some(res) => Some(res),
+            None => p2(i),
+        }
+    }
+}
 
-// fn parse_many<F, T>(p: F) -> impl Fn(&str) -> (String, Vec<T>) where
-//     F: Fn(&str) -> Option<(String, T)>
-// {
-//     move |i| {
-//         let mut v = Vec::new();
-//         match p(i) {
-//             None => (i.to_string(), v),
-//             Some((i2, t)) => {
-//                 v.push(t);
-//                 let (rest, newv) = parse_many(&p)(&i2);
-//                 v.extend(newv);
-//                 (rest, v)
-//             }
-//         }
-//     }
-// }
+fn parse_many<F, T>(p: F) -> impl Fn(&str) -> (String, Vec<T>) where
+    F: Fn(&str) -> Option<(String, T)>
+{
+    move |i_| {
+        let mut v = Vec::new();
+        let mut i = i_.to_string();
 
-// fn parse_many1<F, T>(p: F) -> impl Fn(&str) -> Option<(String, Vec<T>)> where
-//     F: Fn(&str) -> Option<(String, T)>
-// {
-//     move |i| {
-//         let mut v = Vec::new();
-//         match p(i) {
-//             None => None,
-//             Some((i2, t)) => {
-//                 v.push(t);
-//                 let (rest, newv) = parse_many(&p)(&i2);
-//                 v.extend(newv);
-//                 Some((rest, v))
-//             }
-//         }
-//     }
-// }
+        loop {
+            match p(&i) {
+                None => return (i.clone(), v),
+                Some((i1, o)) => {
+                    if i1 == i {
+                        panic!("parse_many passed a parser that matched nothing");
+                    }
 
-// fn parse_digit(i: &str) -> Option<(String, char)> {
-//     parse_alts(
-//         vec![
-//             parse_char('0'),
-//             parse_char('1'),
-//             parse_char('2'),
-//             parse_char('3'),
-//             parse_char('4'),
-//             parse_char('5'),
-//             parse_char('6'),
-//             parse_char('7'),
-//             parse_char('8'),
-//             parse_char('9'),
-//         ]
-//     )(i)
-// }
+                    i = i1.to_string();
+                    v.push(o);
+                }
+            }
+        }
+    }
+}
 
-// fn parse_digits(i: &str) -> Option<(String, String)> {
-//     parse_many1(parse_digit)(i)
-//         .map(|(res, v): (String, Vec<char>)| (res, v.iter().collect::<String>()))
-// }
+fn parse_many1<F, T>(p: F) -> impl Fn(&str) -> Option<(String, Vec<T>)> where
+    F: Fn(&str) -> Option<(String, T)>
+{
+    move |i| {
+        let mut v = Vec::new();
+        match p(i) {
+            None => None,
+            Some((i2, t)) => {
+                v.push(t);
+                let (rest, newv) = parse_many(&p)(&i2);
+                v.extend(newv);
+                Some((rest, v))
+            }
+        }
+    }
+}
 
-// fn parse_float(i: &str) -> Option<(String, f32)> {
-//     parse_many1(
-//         parse_alts(
-//             vec![
-//                 char('0'),
-//                 char('1'),
-//                 char('2'),
-//                 char('3'),
-//                 char('4'),
-//                 char('5'),
-//                 char('6'),
-//                 char('7'),
-//                 char('8'),
-//                 char('9'),
-//             ]
-//         )
-//     )(i)
-//         .map(|(res, v): (String, Vec<char>)| (res, v.iter().collect::<String>()
-// }
+fn parse_digit(i: &str) -> Option<(String, char)> {
+    parse_alts(
+        vec![
+            parse_char('0'),
+            parse_char('1'),
+            parse_char('2'),
+            parse_char('3'),
+            parse_char('4'),
+            parse_char('5'),
+            parse_char('6'),
+            parse_char('7'),
+            parse_char('8'),
+            parse_char('9'),
+        ]
+    )(i)
+}
+
+fn parse_digits(i: &str) -> Option<(String, String)> {
+    parse_many1(parse_digit)(i)
+        .map(|(res, v): (String, Vec<char>)| (res, v.iter().collect::<String>()))
+}
+
+// TODO: This only parses i32, not f32.
+fn parse_float(i: &str) -> Option<(String, f32)> {
+    let (res, float_digits) = parse_digits(i)?;
+    match float_digits.parse::<i32>() {
+        Ok(i) => Some((res, i as f32)),
+        Err(_) => None,
+    }
+}
 
 fn parse_num(i: &str) -> Option<(String, Expr)> {
-    unimplemented!()
-    // let (r, f) = parse_float(i)?;
-    // Some((r, f.into()))
+    let (r, f) = parse_float(i)?;
+    Some((r, f.into()))
 }
 
 fn parse_expr(i: &str) -> Option<(String, Expr)> {
-    parse_alt(parse_var as fn(&str) -> Option<(String, Expr)>, parse_num)(i)
+    parse_alts(
+        vec![
+            parse_var as fn(&str) -> Option<(String, Expr)>,
+            parse_num,
+        ]
+    )(i)
 }
 
 fn expr_parser(input: &str) -> Expr {
@@ -498,6 +492,43 @@ mod tests {
     #[test]
     fn test_parse_many() {
         assert_eq!(parse_many(parse_char('x'))("xxx23"), ("23".to_string(), vec!['x'; 3]));
+        assert_eq!(parse_many(parse_char('x'))("2xxx23"), ("2xxx23".to_string(), vec![]));
+    }
+
+    #[test]
+    fn test_parse_many1() {
+        assert_eq!(parse_many1(parse_char('x'))("xxx23"), Some(("23".to_string(), vec!['x'; 3])));
+        assert_eq!(parse_many1(parse_char('x'))("2xxx23"), None);
+    }
+
+    #[test]
+    fn test_parse_alt() {
+        assert_eq!(
+            parse_alt(parse_char('x'), parse_char('y'))("xy23"),
+            Some(("y23".to_string(), 'x')));
+
+        assert_eq!(
+            parse_alt(parse_char('x'), parse_char('y'))("yx23"),
+            Some(("x23".to_string(), 'y')));
+
+        assert_eq!(
+            parse_alt(parse_char('x'), parse_char('y'))("2x23"),
+            None);
+    }
+
+    #[test]
+    fn test_parse_alts() {
+        assert_eq!(
+            parse_alts(vec![parse_char('x'), parse_char('y')])("xy23"),
+            Some(("y23".to_string(), 'x')));
+
+        assert_eq!(
+            parse_alts(vec![parse_char('x'), parse_char('y')])("yx23"),
+            Some(("x23".to_string(), 'y')));
+
+        assert_eq!(
+            parse_alts(vec![parse_char('x'), parse_char('y')])("2x23"),
+            None);
     }
 
     #[test]
@@ -507,7 +538,16 @@ mod tests {
 
     #[test]
     fn test_parse_digits() {
-        assert_eq!(parse_digits("123xy"), Some(("xy".to_string(), "123".to_string())));
+        assert_eq!(
+            parse_digits("305xy"),
+            Some(("xy".to_string(), "305".to_string())));
+    }
+
+    #[test]
+    fn test_parse_float() {
+        assert_eq!(
+            parse_float("305xy"),
+            Some(("xy".to_string(), 305f32)));
     }
 
     #[test]
