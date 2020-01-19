@@ -250,8 +250,13 @@ fn parse_float(i: &str) -> Option<(String, f32)> {
 }
 
 fn parse_num(i: &str) -> Option<(String, Expr)> {
-    let (r, f) = parse_float(i)?;
-    Some((r, f.into()))
+    let (next, m) =
+        match parse_char('-')(i) {
+            None => (i.to_string(), 1f32),
+            Some((next, _)) => (next, -1f32),
+        };
+    let (r, f) = parse_float(&next)?;
+    Some((r, (m * f).into()))
 }
 
 fn parse_tag(tag: &str) -> impl Fn(&str) -> Option<(String, String)> + '_ {
@@ -615,6 +620,7 @@ mod tests {
     #[test]
     fn test_parse_num() {
         assert_eq!(parse_num("123"), Some(("".to_string(), 123.into())));
+        assert_eq!(parse_num("-123"), Some(("".to_string(), (-123).into())));
         assert_eq!(parse_num("y"), None);
     }
 
