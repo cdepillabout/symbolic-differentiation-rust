@@ -10,6 +10,8 @@ use nom::number::complete::float;
 use std::ops::{Add, Div, Mul, Sub};
 use std::str::FromStr;
 
+mod lib2;
+
 fn main() {
     
 }
