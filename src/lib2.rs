@@ -150,7 +150,7 @@ fn parse_char(c: char) -> impl Fn(&str) -> Option<(String, char)> {
 }
 
 fn parse_var(i: &str) -> Option<(String, Expr)> {
-    let (i2, c) = parse_char('x')(i)?;
+    let (i2, _) = parse_char('x')(i)?;
     Some((i2, Expr::Var))
 }
 
@@ -253,9 +253,6 @@ fn parse_num(i: &str) -> Option<(String, Expr)> {
     let (r, f) = parse_float(i)?;
     Some((r, f.into()))
 }
-
-// named!(parse_func<&str, Expr>,
-//     delimited!(tag!("("), parse_inner_func, tag!(")")));
 
 fn parse_tag(tag: &str) -> impl Fn(&str) -> Option<(String, String)> + '_ {
     move |i| {
@@ -588,7 +585,6 @@ fn simplify(expr: Expr) -> Expr {
 }
 
 fn diff(expr: &str) -> String {
-    // TODO: Implement from_string for expr
     pretty_print_expr(simplify(auto_diff(expr_parser(expr))))
 }
 
