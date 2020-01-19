@@ -257,24 +257,128 @@ fn parse_num(i: &str) -> Option<(String, Expr)> {
 // named!(parse_func<&str, Expr>,
 //     delimited!(tag!("("), parse_inner_func, tag!(")")));
 
+fn parse_tag(tag: &str) -> impl Fn(&str) -> Option<(String, String)> + '_ {
+    move |i| {
+        if i.starts_with(tag) {
+            Some((i.chars().skip(tag.len()).collect(), tag.to_string()))
+        } else {
+            None
+        }
+
+    }
+}
+
+fn parse_ln_func(i: &str) -> Option<(String, FuncAr1)> {
+    let (res1, _) = parse_tag("ln")(i)?;
+    Some((res1, FuncAr1::Ln))
+}
+
+fn parse_cos_func(i: &str) -> Option<(String, FuncAr1)> {
+    let (res1, _) = parse_tag("cos")(i)?;
+    Some((res1, FuncAr1::Cos))
+}
+
+fn parse_sin_func(i: &str) -> Option<(String, FuncAr1)> {
+    let (res1, _) = parse_tag("sin")(i)?;
+    Some((res1, FuncAr1::Sin))
+}
+
+fn parse_tan_func(i: &str) -> Option<(String, FuncAr1)> {
+    let (res1, _) = parse_tag("tan")(i)?;
+    Some((res1, FuncAr1::Tan))
+}
+
+fn parse_exp_func(i: &str) -> Option<(String, FuncAr1)> {
+    let (res1, _) = parse_tag("exp")(i)?;
+    Some((res1, FuncAr1::Exp))
+}
+
+fn parse_func_ar_1_name(i: &str) -> Option<(String, FuncAr1)> {
+    parse_alts(
+        vec![
+            parse_ln_func as fn(&str) -> Option<(String, FuncAr1)>,
+            parse_cos_func,
+            parse_sin_func,
+            parse_tan_func,
+            parse_exp_func,
+        ]
+    )(i)
+}
+
+fn parse_plus_func(i: &str) -> Option<(String, FuncAr2)> {
+    let (res1, _) = parse_tag("+")(i)?;
+    Some((res1, FuncAr2::Plus))
+}
+
+fn parse_minus_func(i: &str) -> Option<(String, FuncAr2)> {
+    let (res1, _) = parse_tag("-")(i)?;
+    Some((res1, FuncAr2::Minus))
+}
+
+fn parse_times_func(i: &str) -> Option<(String, FuncAr2)> {
+    let (res1, _) = parse_tag("*")(i)?;
+    Some((res1, FuncAr2::Times))
+}
+
+fn parse_div_func(i: &str) -> Option<(String, FuncAr2)> {
+    let (res1, _) = parse_tag("/")(i)?;
+    Some((res1, FuncAr2::Div))
+}
+
+fn parse_pow_func(i: &str) -> Option<(String, FuncAr2)> {
+    let (res1, _) = parse_tag("^")(i)?;
+    Some((res1, FuncAr2::Pow))
+}
+
+fn parse_func_ar_2_name(i: &str) -> Option<(String, FuncAr2)> {
+    parse_alts(
+        vec![
+            parse_plus_func as fn(&str) -> Option<(String, FuncAr2)>,
+            parse_minus_func,
+            parse_times_func,
+            parse_div_func,
+            parse_pow_func,
+        ]
+    )(i)
+}
+
+fn parse_inner_func_ar_1(i: &str) -> Option<(String, Expr)> {
+    let (res1, name) = parse_func_ar_1_name(i)?;
+    let (res2, _) = parse_char(' ')(&res1)?;
+    let (res3, expr) = parse_expr(&res2)?;
+    Some((res3, Expr::FuncAr1(name, bx(expr))))
+}
+
+fn parse_inner_func_ar_2(i: &str) -> Option<(String, Expr)> {
+    let (res1, name) = parse_func_ar_2_name(i)?;
+    let (res2, _) = parse_char(' ')(&res1)?;
+    let (res3, expr1) = parse_expr(&res2)?;
+    let (res4, _) = parse_char(' ')(&res3)?;
+    let (res5, expr2) = parse_expr(&res4)?;
+    Some((res5, Expr::FuncAr2(name, bx(expr1), bx(expr2))))
+}
+
 fn parse_inner_func(i: &str) -> Option<(String, Expr)> {
-    unimplemented!()
+    parse_alt(
+        parse_inner_func_ar_1 as fn(&str) -> Option<(String, Expr)>,
+        parse_inner_func_ar_2
+    )(i)
 }
 
 fn parse_delimited<F, G, T, U>(start: F, middle: G, end: F) -> impl Fn(&str) -> Option<(String, T)> where
-    F: FnOnce(&str) -> Option<(String, U)>,
-    G: FnOnce(&str) -> Option<(String, T)>,
+    F: Fn(&str) -> Option<(String, U)>,
+    G: Fn(&str) -> Option<(String, T)>,
 {
     move |i| {
         match start(i) {
             None => None,
             Some((i2, _)) => {
-                match middle(i2) {
+                match middle(&i2) {
                     None => None,
                     Some((i3, res)) => {
-                        match end(i3) {
+                        match end(&i3) {
                             None => None,
-                            Some((i4, _)) => Some((i4, res)),
+                            Some((i4, _)) => Some((i4.to_string(), res)),
                         }
                     }
                 }
@@ -284,7 +388,7 @@ fn parse_delimited<F, G, T, U>(start: F, middle: G, end: F) -> impl Fn(&str) -> 
 }
 
 fn parse_func(i: &str) -> Option<(String, Expr)> {
-    parse_delimited(parse_char('('), parse_inner_func, parse_char(')'))
+    parse_delimited(parse_char('('), parse_inner_func, parse_char(')'))(i)
 }
 
 fn parse_expr(i: &str) -> Option<(String, Expr)> {
@@ -591,6 +695,12 @@ mod tests {
         assert_eq!(parse_and_print("(ln 123)"), "(ln 123)");
         assert_eq!(parse_and_print("(ln (cos x))"), "(ln (cos x))");
         assert_eq!(parse_and_print("(+ (cos x) (- x (ln 3)))"), "(+ (cos x) (- x (ln 3)))");
+    }
+
+    #[test]
+    fn test_inner_func_ar_1() {
+        assert_eq!(parse_and_print("(ln x)"), "(ln x)");
+        assert_eq!(parse_and_print("(ln (cos 3))"), "(ln (cos 3))");
     }
 
     #[test]
